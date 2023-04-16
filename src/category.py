@@ -1,80 +1,11 @@
 from functools import singledispatchmethod
 from itertools import product
-from typing import Any, Callable, Iterable, Optional, Set
+from typing import Any, Callable, Set
 
-from icontract import ensure, require
+from icontract import require
 
-from colors import Colors
-
-
-class Ob:
-    def __init__(self, name: str, _type: type, value: Iterable) -> None:
-        self.name = name
-        self._type = _type
-        self.value = value
-
-
-def dom_is_subset_of_codom(
-    name: str,
-    dom: Ob,
-    codom: Ob,
-    fn: Callable,
-) -> Optional[bool]:
-    if all([fn(val) in codom.value for val in dom.value]):
-        return True
-    raise ImageIsNotSubsetOfCodom(dom, codom, name)
-
-
-def type_of_dom_matches_type_of_codom(dom: Ob, codom: Ob) -> bool:
-    return dom._type == codom._type
-
-
-class ImageIsNotSubsetOfCodom(Exception):
-    def __init__(self, dom: Ob, codom: Ob, fn_name: str) -> None:
-        super().__init__(
-            f"{Colors.FAIL} The image of {dom.name} under {fn_name} must be a subset of {codom.name} {Colors.ENDC}"
-        )
-
-
-class Hom(Callable):
-    @require(type_of_dom_matches_type_of_codom)
-    @ensure(dom_is_subset_of_codom)
-    def __init__(self, name: str, dom: Ob, codom: Ob, fn: Callable) -> None:
-        # TODO: (fix) this is assuming that objects are always Iterables. Not necessarily the case.
-        self.name = name
-        self.dom = dom
-        self.codom = codom
-        self.fn = fn
-
-    def __hash__(self) -> int:
-        return hash(self.name + self.dom.name + self.codom.name)
-
-    def __call__(self, src: Ob):
-        # TODO: (fix) this is assuming that objects are always Iterables. Not necessarily the case.
-        return {self.fn(val) for val in src.value}
-
-    def __eq__(self, other) -> bool:
-        return (
-            self.dom == other.dom
-            and self.codom == other.codom
-            and {self.fn(val) for val in self.dom.value}
-            == {other.fn(val) for val in other.dom.value}
-        )
-
-
-class NotComposable(Exception):
-    def __init__(self, f: Hom, g: Hom) -> None:
-        super().__init__(
-            f"{Colors.FAIL} Unable to form the composition {f.name};{g.name}. The codomain of f must match the domain of g."
-            f"The codomain of {f.name} was {f.codom} != {g.dom}, the domain of {g.name}"
-            f"{Colors.ENDC}"
-        )
-
-
-def homs_are_composable(f: Hom, g: Hom) -> Optional[bool]:
-    if f.codom == g.dom:
-        return True
-    raise NotComposable(f, g)
+from hom import Hom, homs_are_composable
+from ob import Ob
 
 
 class Category:
@@ -84,8 +15,8 @@ class Category:
         self.homs = homs.union(self.id_homs.values())
 
         # Category axioms
-        # associativity 
-        for f, g, h in product(homs, homs, homs): 
+        # associativity
+        for f, g, h in product(homs, homs, homs):
             if f.codom == g.dom and g.codom == h.dom:
                 assert self.compose(self.compose(f, g), h) == self.compose(
                     f, self.compose(g, h)
@@ -144,7 +75,7 @@ class Functor:
 
     @singledispatchmethod
     def __call__(self, arg: Any):
-        print("calling...")
+        pass
 
     @__call__.register
     def _(self, arg: Ob) -> Ob:
@@ -184,7 +115,7 @@ if __name__ == "__main__":
 
     # Example of a contract violation
     d = Ob("D", set, {1, 2, 3})
-    # Hom("hom_a_d", a,d, lambda x: 1 if x == 1 else 5) 
+    # Hom("hom_a_d", a,d, lambda x: 1 if x == 1 else 5)
     # ^^ (This will throw an ImageIsNotSubsetOfCodom exception.)
 
     C.compose(hom_a_b, hom_a_b)
