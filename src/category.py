@@ -64,7 +64,7 @@ class Functor:
                     val
                 )
 
-        # F(f;g) = F(g);F(g)
+        # F(f;g) = F(f);F(g)
         for f, g in product(dom.homs, dom.homs):
             # only check for composable morphisms
             if f.codom == g.dom:
@@ -79,7 +79,6 @@ class Functor:
 
     @__call__.register
     def _(self, arg: Ob) -> Ob:
-        "inside ob call"
         return self.map_on_obs(arg)
 
     @__call__.register
